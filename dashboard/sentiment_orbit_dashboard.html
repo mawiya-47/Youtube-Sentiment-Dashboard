@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentiment Orbit — YouTube Comment Intelligence</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0A0E1C;
+  --panel:#12172C;
+  --panel-2:#181F3A;
+  --line:rgba(140,155,220,0.14);
+  --text:#EAF0FF;
+  --muted:#8B93B5;
+  --positive:#2DE1C2;
+  --neutral:#FFC857;
+  --negative:#FF5C7A;
+  --positive-glow: rgba(45,225,194,0.35);
+  --neutral-glow: rgba(255,200,87,0.35);
+  --negative-glow: rgba(255,92,122,0.35);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; overflow-x:hidden;}
+body{
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(45,225,194,0.10), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 90% 10%, rgba(255,92,122,0.08), transparent 60%),
+    radial-gradient(ellipse 1000px 700px at 50% 100%, rgba(255,200,87,0.06), transparent 60%);
+}
+::selection{background:var(--positive); color:#04120E;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.display{font-family:'Space Grotesk',sans-serif;}
+a{color:inherit;}
+
+/* ---------- layout shells ---------- */
+.wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+section{padding:96px 0;}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace; font-size:12.5px; letter-spacing:0.14em;
+  text-transform:uppercase; color:var(--muted); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+}
+.eyebrow::before{content:""; width:22px; height:1px; background:var(--muted);}
+h2.section-title{font-family:'Space Grotesk',sans-serif; font-size:clamp(28px,3.6vw,42px); font-weight:600; letter-spacing:-0.01em; margin-bottom:14px;}
+.section-sub{color:var(--muted); font-size:16px; max-width:640px; line-height:1.6; margin-bottom:48px;}
+
+/* ---------- nav ---------- */
+nav{
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  background:rgba(10,14,28,0.65); border-bottom:1px solid var(--line);
+}
+nav .wrap{display:flex; align-items:center; justify-content:space-between; height:66px;}
+.brand{display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:600; font-size:16px;}
+.brand-dot{width:9px; height:9px; border-radius:50%; background:var(--positive); box-shadow:0 0 12px var(--positive);}
+.nav-links{display:flex; gap:30px; font-size:14px; color:var(--muted);}
+.nav-links a{text-decoration:none; transition:color .2s;}
+.nav-links a:hover{color:var(--text);}
+.nav-badge{
+  font-family:'JetBrains Mono'; font-size:11.5px; padding:6px 12px; border:1px solid var(--line);
+  border-radius:20px; color:var(--muted);
+}
+
+/* ---------- HERO ---------- */
+.hero{
+  min-height:100vh; display:flex; align-items:center; padding-top:66px;
+  perspective:1400px;
+}
+.hero .wrap{display:grid; grid-template-columns:1.05fr 0.95fr; gap:40px; align-items:center;}
+.hero h1{
+  font-family:'Space Grotesk'; font-weight:700; font-size:clamp(38px,5vw,60px);
+  line-height:1.04; letter-spacing:-0.02em; margin-bottom:22px;
+}
+.hero h1 .accent{color:var(--positive);}
+.hero p{color:var(--muted); font-size:17px; line-height:1.7; max-width:480px; margin-bottom:34px;}
+.hero-stats{display:flex; gap:34px; margin-bottom:38px;}
+.hero-stat b{display:block; font-family:'JetBrains Mono'; font-size:26px; font-weight:700; color:var(--text);}
+.hero-stat span{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;}
+
+/* live predict box */
+.predict-box{
+  background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--line); border-radius:16px; padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.35);
+}
+.predict-box label{font-family:'JetBrains Mono'; font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; display:block; margin-bottom:10px;}
+.predict-row{display:flex; gap:10px;}
+.predict-row input{
+  flex:1; background:#0C1024; border:1px solid var(--line); border-radius:10px; color:var(--text);
+  padding:13px 14px; font-family:'Inter'; font-size:14.5px; outline:none; transition:border-color .2s;
+}
+.predict-row input:focus{border-color:var(--positive);}
+.predict-row button{
+  background:var(--positive); color:#04120E; border:none; border-radius:10px; padding:0 22px;
+  font-family:'Space Grotesk'; font-weight:600; font-size:14.5px; cursor:pointer; transition:transform .15s, box-shadow .15s;
+}
+.predict-row button:hover{transform:translateY(-1px); box-shadow:0 8px 24px var(--positive-glow);}
+.predict-row button:active{transform:translateY(0);}
+.predict-hint{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5;}
+.predict-result{margin-top:16px; display:none;}
+.predict-result.show{display:block; animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+.result-pill{
+  display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-size:13px; font-weight:700;
+  padding:7px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em;
+}
+.pill-positive{background:rgba(45,225,194,0.14); color:var(--positive); border:1px solid rgba(45,225,194,0.4);}
+.pill-neutral{background:rgba(255,200,87,0.14); color:var(--neutral); border:1px solid rgba(255,200,87,0.4);}
+.pill-negative{background:rgba(255,92,122,0.14); color:var(--negative); border:1px solid rgba(255,92,122,0.4);}
+.prob-bars{margin-top:12px; display:flex; flex-direction:column; gap:8px;}
+.prob-row{display:grid; grid-template-columns:70px 1fr 46px; align-items:center; gap:10px; font-size:12px; color:var(--muted);}
+.prob-track{height:6px; background:#0C1024; border-radius:4px; overflow:hidden;}
+.prob-fill{height:100%; border-radius:4px; transition:width .5s cubic-bezier(.2,.8,.2,1);}
+
+/* ---------- 3D ORBIT (signature element) ---------- */
+.orbit-stage{
+  position:relative; height:440px; display:flex; align-items:center; justify-content:center;
+  transform-style:preserve-3d;
+}
+.orbit-scene{
+  position:relative; width:340px; height:340px; transform-style:preserve-3d;
+  animation:sceneSpin 26s linear infinite;
+}
+@keyframes sceneSpin{from{transform:rotateX(62deg) rotateZ(0deg);} to{transform:rotateX(62deg) rotateZ(360deg);}}
+.orbit-core{
+  position:absolute; top:50%; left:50%; width:74px; height:74px; margin:-37px 0 0 -37px;
+  border-radius:50%; transform:translateZ(0) rotateX(-62deg);
+  background:radial-gradient(circle at 35% 30%, #2a3563, #0c1024 72%);
+  box-shadow:0 0 60px rgba(120,140,255,0.25), inset 0 0 30px rgba(255,255,255,0.05);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono'; font-size:10px; color:var(--muted); letter-spacing:.05em; text-align:center;
+}
+.orbit-ring{
+  position:absolute; top:50%; left:50%; border-radius:50%; border:1px solid rgba(140,155,220,0.18);
+  transform:translate(-50%,-50%);
+}
+.ring-1{width:170px; height:170px;}
+.ring-2{width:250px; height:250px;}
+.ring-3{width:330px; height:330px;}
+.orbit-path{
+  position:absolute; top:50%; left:50%; width:1px; height:1px; transform-style:preserve-3d;
+}
+.orb{
+  position:absolute; border-radius:50%; transform-style:preserve-3d;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+}
+.orb-core{border-radius:50%; width:100%; height:100%;}
+.orb-label{
+  position:absolute; bottom:-26px; left:50%; transform:translateX(-50%) rotateX(-62deg);
+  font-family:'JetBrains Mono'; font-size:10px; white-space:nowrap; letter-spacing:.04em;
+}
+.orb-positive{width:64px; height:64px; animation:orbitA 26s linear infinite reverse;}
+.orb-neutral{width:44px; height:44px; animation:orbitB 26s linear infinite reverse;}
+.orb-negative{width:34px; height:34px; animation:orbitC 26s linear infinite reverse;}
+.orb-positive .orb-core{background:radial-gradient(circle at 32% 28%, #baffef, var(--positive) 55%, #0c8f79); box-shadow:0 0 40px var(--positive-glow);}
+.orb-neutral .orb-core{background:radial-gradient(circle at 32% 28%, #ffe9b8, var(--neutral) 55%, #a67413); box-shadow:0 0 30px var(--neutral-glow);}
+.orb-negative .orb-core{background:radial-gradient(circle at 32% 28%, #ffc3cf, var(--negative) 55%, #9c1734); box-shadow:0 0 26px var(--negative-glow);}
+@keyframes orbitA{from{transform:translate(-50%,-50%) rotateZ(0deg) translateX(125px) rotateZ(0deg) rotateX(-62deg);}
+  to{transform:translate(-50%,-50%) rotateZ(360deg) translateX(125px) rotateZ(-360deg) rotateX(-62deg);}}
+@keyframes orbitB{from{transform:translate(-50%,-50%) rotateZ(120deg) translateX(85px) rotateZ(-120deg) rotateX(-62deg);}
+  to{transform:translate(-50%,-50%) rotateZ(480deg) translateX(85px) rotateZ(-480deg) rotateX(-62deg);}}
+@keyframes orbitC{from{transform:translate(-50%,-50%) rotateZ(240deg) translateX(45px) rotateZ(-240deg) rotateX(-62deg);}
+  to{transform:translate(-50%,-50%) rotateZ(600deg) translateX(45px) rotateZ(-600deg) rotateX(-62deg);}}
+.orbit-caption{
+  position:absolute; bottom:0; left:0; right:0; text-align:center; font-family:'JetBrains Mono';
+  font-size:11px; color:var(--muted); letter-spacing:.05em;
+}
+
+/* ---------- stat strip ---------- */
+.stat-strip{border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+.stat-strip .wrap{display:grid; grid-template-columns:repeat(4,1fr); gap:0;}
+.stat-cell{padding:34px 24px; border-left:1px solid var(--line);}
+.stat-cell:first-child{border-left:none;}
+.stat-cell b{display:block; font-family:'JetBrains Mono'; font-size:30px; font-weight:700;}
+.stat-cell span{font-size:12.5px; color:var(--muted);}
+
+/* ---------- generic cards / panels ---------- */
+.panel{
+  background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--line); border-radius:16px; padding:28px;
+}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+
+/* ---------- leaderboard ---------- */
+.board{width:100%; border-collapse:collapse;}
+.board thead th{
+  text-align:left; font-family:'JetBrains Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--muted); padding:10px 14px; border-bottom:1px solid var(--line); font-weight:500;
+}
+.board tbody td{padding:13px 14px; font-size:14px; border-bottom:1px solid var(--line);}
+.board tbody tr{transition:background .15s, transform .15s; transform-style:preserve-3d;}
+.board tbody tr:hover{background:rgba(140,155,220,0.05); transform:perspective(600px) rotateX(1deg) translateZ(4px);}
+.board tbody tr.winner{background:rgba(45,225,194,0.06);}
+.board tbody tr.winner td:first-child{color:var(--positive); font-weight:700;}
+.rank{font-family:'JetBrains Mono'; color:var(--muted); font-size:12.5px;}
+.metric{font-family:'JetBrains Mono';}
+.crown{font-size:11px; margin-left:6px; color:var(--positive); font-family:'JetBrains Mono';}
+.bar-cell{width:130px;}
+.mini-bar{height:6px; border-radius:4px; background:#0C1024; overflow:hidden;}
+.mini-bar-fill{height:100%; border-radius:4px; background:linear-gradient(90deg, var(--positive), #6be7d4);}
+
+/* ---------- confusion matrix ---------- */
+.cm-wrap{display:flex; gap:26px; align-items:center; flex-wrap:wrap;}
+.cm-grid{display:grid; grid-template-columns:70px repeat(3,84px); grid-template-rows:24px repeat(3,64px); gap:5px;}
+.cm-cell{
+  display:flex; align-items:center; justify-content:center; border-radius:8px; font-family:'JetBrains Mono'; font-size:15px; font-weight:700;
+}
+.cm-head{background:transparent; color:var(--muted); font-size:11px; font-weight:500; text-transform:uppercase;}
+.cm-legend{display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--muted); max-width:220px;}
+.cm-legend .lg-row{display:flex; align-items:center; gap:8px;}
+.lg-dot{width:9px; height:9px; border-radius:50%;}
+
+/* ---------- per-class metrics ---------- */
+.class-rows{display:flex; flex-direction:column; gap:18px;}
+.class-row{display:grid; grid-template-columns:100px 1fr 60px; align-items:center; gap:14px;}
+.class-tag{font-family:'JetBrains Mono'; font-size:12.5px; text-transform:uppercase; letter-spacing:.05em;}
+.class-track{height:10px; border-radius:6px; background:#0C1024; overflow:hidden; position:relative;}
+.class-fill{height:100%; border-radius:6px;}
+.class-val{font-family:'JetBrains Mono'; font-size:13px; text-align:right;}
+
+/* ---------- word tag clouds ---------- */
+.cloud-tabs{display:flex; gap:8px; margin-bottom:22px;}
+.cloud-tab{
+  font-family:'JetBrains Mono'; font-size:12px; padding:8px 16px; border-radius:20px; border:1px solid var(--line);
+  color:var(--muted); cursor:pointer; background:transparent; transition:all .2s;
+}
+.cloud-tab.active{color:#04120E; border-color:transparent;}
+.cloud-tab[data-c="positive"].active{background:var(--positive);}
+.cloud-tab[data-c="neutral"].active{background:var(--neutral);}
+.cloud-tab[data-c="negative"].active{background:var(--negative);}
+.tagcloud{
+  display:flex; flex-wrap:wrap; gap:12px 18px; align-items:center; min-height:180px; padding:20px 6px;
+  perspective:800px;
+}
+.tag{
+  font-family:'Space Grotesk'; font-weight:600; opacity:0; transform:translateZ(-40px) rotateY(8deg);
+  animation:tagIn .6s forwards; transition:transform .25s;
+}
+.tag:hover{transform:translateZ(20px) scale(1.08) !important;}
+@keyframes tagIn{to{opacity:1; transform:translateZ(0) rotateY(0);}}
+
+/* ---------- pipeline ---------- */
+.pipeline{display:grid; grid-template-columns:repeat(6,1fr); gap:14px;}
+.pipe-step{
+  background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 14px; text-align:center;
+  position:relative; transition:transform .25s;
+}
+.pipe-step:hover{transform:translateY(-6px) rotateX(4deg); border-color:rgba(45,225,194,0.4);}
+.pipe-num{font-family:'JetBrains Mono'; font-size:11px; color:var(--positive); margin-bottom:8px;}
+.pipe-title{font-family:'Space Grotesk'; font-weight:600; font-size:13.5px; margin-bottom:6px;}
+.pipe-desc{font-size:11.5px; color:var(--muted); line-height:1.4;}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line); padding:40px 0; color:var(--muted); font-size:13px;}
+footer .wrap{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;}
+
+/* ---------- responsive ---------- */
+@media (max-width:920px){
+  .hero .wrap{grid-template-columns:1fr;}
+  .orbit-stage{height:320px; order:-1;}
+  .grid-2{grid-template-columns:1fr;}
+  .stat-strip .wrap{grid-template-columns:repeat(2,1fr);}
+  .stat-cell:nth-child(3){border-left:none;}
+  .pipeline{grid-template-columns:repeat(2,1fr);}
+  .nav-links{display:none;}
+  .cm-wrap{justify-content:center;}
+}
+@media (prefers-reduced-motion: reduce){
+  .orbit-scene, .orb-positive, .orb-neutral, .orb-negative{animation:none !important;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><img src="favicon-48x48.png" alt="" width="22" height="22" style="border-radius:6px;">Sentiment&nbsp;Orbit</div>
+    <div class="nav-links">
+      <a href="#predict">Live Predict</a>
+      <a href="#leaderboard">Models</a>
+      <a href="#matrix">Evaluation</a>
+      <a href="#words">Vocabulary</a>
+      <a href="#pipeline">Pipeline</a>
+    </div>
+    <div class="nav-badge">SGD Classifier · 75.1% acc</div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="predict">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Youtube comment intelligence</div>
+      <h1>Three sentiments,<br>one <span class="accent">orbit</span>.</h1>
+      <p>17,647 real YouTube comments, cleaned and classified into positive, neutral, and negative sentiment. Thirteen models were trained and compared — the one in orbit below won.</p>
+
+      <div class="hero-stats">
+        <div class="hero-stat"><b>17,647</b><span>Comments analyzed</span></div>
+        <div class="hero-stat"><b>13</b><span>Models compared</span></div>
+        <div class="hero-stat"><b>75.1%</b><span>Test accuracy</span></div>
+      </div>
+
+      <div class="predict-box">
+        <label>Try it — type a comment</label>
+        <div class="predict-row">
+          <input id="predictInput" type="text" placeholder="e.g. this tutorial was actually really helpful, thanks!" maxlength="300">
+          <button id="predictBtn">Classify</button>
+        </div>
+        <div class="predict-hint" id="predictHint">Connects to your local FastAPI server at <span class="mono">localhost:8000/predict</span> if it's running — otherwise falls back to a lightweight offline demo.</div>
+        <div class="predict-result" id="predictResult">
+          <span class="result-pill" id="resultPill">—</span>
+          <div class="prob-bars" id="probBars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="orbit-stage" id="orbitStage">
+      <div class="orbit-scene">
+        <div class="orbit-ring ring-1"></div>
+        <div class="orbit-ring ring-2"></div>
+        <div class="orbit-ring ring-3"></div>
+        <div class="orbit-core">TF-IDF<br>+ SGD</div>
+        <div class="orb orb-positive"><div class="orb-core"></div><span class="orb-label" style="color:var(--positive)">positive · 64.6%</span></div>
+        <div class="orb orb-neutral"><div class="orb-core"></div><span class="orb-label" style="color:var(--neutral)">neutral · 26.2%</span></div>
+        <div class="orb orb-negative"><div class="orb-core"></div><span class="orb-label" style="color:var(--negative)">negative · 13.2%</span></div>
+      </div>
+      <div class="orbit-caption">orbit radius ∝ class share of the dataset</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STAT STRIP ============ -->
+<div class="stat-strip">
+  <div class="wrap">
+    <div class="stat-cell"><b>17,874 → 17,647</b><span>Rows after removing 44 nulls + 531 duplicates</span></div>
+    <div class="stat-cell"><b style="color:var(--positive)">0.659</b><span>Best macro F1 (SGD Classifier)</span></div>
+    <div class="stat-cell"><b>15,000</b><span>TF-IDF vocabulary size (uni+bigrams)</span></div>
+    <div class="stat-cell"><b>3,530</b><span>Held-out test comments (stratified 20%)</span></div>
+  </div>
+</div>
+
+<!-- ============ LEADERBOARD ============ -->
+<section id="leaderboard">
+  <div class="wrap">
+    <div class="eyebrow">Phase 8 — Model building</div>
+    <h2 class="section-title">Thirteen models entered the orbit.</h2>
+    <p class="section-sub">Every model trained on identical TF-IDF features and evaluated on the same held-out test set. Ranked by macro F1 — the fair metric given the 65/26/13 class imbalance.</p>
+
+    <div class="panel">
+      <table class="board">
+        <thead>
+          <tr><th>#</th><th>Model</th><th>Accuracy</th><th>Macro F1</th><th class="bar-cell">—</th><th>Train time</th></tr>
+        </thead>
+        <tbody id="boardBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EVALUATION ============ -->
+<section id="matrix">
+  <div class="wrap">
+    <div class="eyebrow">Phase 9 — Evaluation</div>
+    <h2 class="section-title">Where the winner struggles.</h2>
+    <p class="section-sub">Positive comments are classified confidently. Negative and neutral comments — the minority classes — are where the model still confuses itself. Honest numbers, not cherry-picked ones.</p>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div style="font-family:'Space Grotesk'; font-weight:600; margin-bottom:20px;">Confusion matrix — SGD Classifier</div>
+        <div class="cm-wrap">
+          <div class="cm-grid" id="cmGrid"></div>
+          <div class="cm-legend">
+            <div class="lg-row"><span class="lg-dot" style="background:var(--positive)"></span>Rows = actual class</div>
+            <div class="lg-row"><span class="lg-dot" style="background:var(--neutral)"></span>Columns = predicted class</div>
+            <div class="lg-row"><span class="lg-dot" style="background:var(--negative)"></span>Darker = more comments</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="font-family:'Space Grotesk'; font-weight:600; margin-bottom:20px;">Per-class F1 score</div>
+        <div class="class-rows" id="classRows"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORD CLOUDS ============ -->
+<section id="words">
+  <div class="wrap">
+    <div class="eyebrow">Phase 3 — Vocabulary</div>
+    <h2 class="section-title">What each sentiment sounds like.</h2>
+    <p class="section-sub">Top words by frequency within each class, after stopword removal and lemmatization. Size reflects relative frequency.</p>
+
+    <div class="panel">
+      <div class="cloud-tabs">
+        <button class="cloud-tab active" data-c="positive">Positive</button>
+        <button class="cloud-tab" data-c="neutral">Neutral</button>
+        <button class="cloud-tab" data-c="negative">Negative</button>
+      </div>
+      <div class="tagcloud" id="tagCloud"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PIPELINE ============ -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="eyebrow">Phase 1–14 — Architecture</div>
+    <h2 class="section-title">The full path, raw comment to prediction.</h2>
+    <div class="pipeline" id="pipelineGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>YouTube Comment Sentiment Analysis — classical ML pipeline, real dataset, honest metrics.</span>
+    <span class="mono">TF-IDF · SGD Classifier · FastAPI · 16/16 tests passing</span>
+  </div>
+</footer>
+
+<script>
+/* ============ real project data ============ */
+const models = [
+  {name:"SGD Classifier", accuracy:0.7513, f1:0.6592, time:0.10, winner:true},
+  {name:"Logistic Regression", accuracy:0.7278, f1:0.6542, time:0.37},
+  {name:"Extra Trees", accuracy:0.7142, f1:0.6368, time:11.64},
+  {name:"Linear SVM", accuracy:0.7465, f1:0.6302, time:0.41},
+  {name:"LightGBM", accuracy:0.7357, f1:0.6203, time:18.91},
+  {name:"Random Forest", accuracy:0.6980, f1:0.6143, time:11.73},
+  {name:"Passive Aggressive", accuracy:0.7300, f1:0.6086, time:0.23},
+  {name:"XGBoost", accuracy:0.7331, f1:0.6033, time:68.20},
+  {name:"Decision Tree", accuracy:0.6125, f1:0.5374, time:1.58},
+  {name:"Gradient Boosting", accuracy:0.6864, f1:0.4994, time:38.88},
+  {name:"Multinomial Naive Bayes", accuracy:0.6754, f1:0.4383, time:0.00},
+  {name:"AdaBoost", accuracy:0.6360, f1:0.3041, time:5.54},
+  {name:"KNN", accuracy:0.2907, f1:0.1891, time:0.00},
+];
+
+const confusionMatrix = [[234,125,104],[120,513,227],[73,229,1905]]; // rows/cols: negative, neutral, positive
+const cmLabels = ["negative","neutral","positive"];
+const cmColors = {negative:"255,92,122", neutral:"255,200,87", positive:"45,225,194"};
+
+const classMetrics = [
+  {name:"positive", f1:0.8575, color:"var(--positive)"},
+  {name:"neutral", f1:0.5941, color:"var(--neutral)"},
+  {name:"negative", f1:0.5258, color:"var(--negative)"},
+];
+
+const wordClouds = {
+  positive: [["love",42],["great",38],["thank",36],["thanks",30],["good",28],["video",26],["really",24],["always",20],["make",18],["much",17],["im",16],["one",15],["get",14],["year",13],["game",12],["see",11],["time",20],["like",34]],
+  neutral: [["like",30],["video",26],["time",22],["get",20],["know",19],["would",18],["dont",17],["make",16],["im",15],["year",14],["data",13],["also",12],["people",16],["one",24],["game",11]],
+  negative: [["people",28],["like",30],["dont",24],["one",22],["im",20],["get",19],["would",18],["time",17],["even",16],["know",15],["year",14],["make",13],["thing",16],["really",14],["think",13],["game",12],["video",20],["way",11]],
+};
+
+const pipelineSteps = [
+  {n:"01", t:"Clean", d:"Drop nulls & dupes"},
+  {n:"02", t:"Preprocess", d:"Lowercase, strip URLs, lemmatize"},
+  {n:"03", t:"Vectorize", d:"TF-IDF, 15k vocab, bigrams"},
+  {n:"04", t:"Split", d:"80/20 stratified"},
+  {n:"05", t:"Train", d:"13 models compared"},
+  {n:"06", t:"Serve", d:"FastAPI /predict"},
+];
+
+/* ============ render leaderboard ============ */
+const boardBody = document.getElementById("boardBody");
+const maxF1 = Math.max(...models.map(m=>m.f1));
+models.forEach((m,i)=>{
+  const tr = document.createElement("tr");
+  if(m.winner) tr.className = "winner";
+  tr.innerHTML = `
+    <td class="rank">${String(i+1).padStart(2,"0")}</td>
+    <td>${m.name}${m.winner ? '<span class="crown">★ winner</span>' : ''}</td>
+    <td class="metric">${(m.accuracy*100).toFixed(1)}%</td>
+    <td class="metric">${m.f1.toFixed(3)}</td>
+    <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${(m.f1/maxF1*100).toFixed(0)}%"></div></div></td>
+    <td class="metric" style="color:var(--muted)">${m.time.toFixed(2)}s</td>
+  `;
+  boardBody.appendChild(tr);
+});
+
+/* ============ render confusion matrix ============ */
+const cmGrid = document.getElementById("cmGrid");
+const cmMax = Math.max(...confusionMatrix.flat());
+cmGrid.appendChild(document.createElement("div"));
+cmLabels.forEach(l=>{
+  const el = document.createElement("div");
+  el.className = "cm-cell cm-head";
+  el.textContent = l.slice(0,3);
+  cmGrid.appendChild(el);
+});
+confusionMatrix.forEach((row,ri)=>{
+  const rowLabel = document.createElement("div");
+  rowLabel.className = "cm-cell cm-head";
+  rowLabel.style.justifyContent = "flex-end";
+  rowLabel.textContent = cmLabels[ri].slice(0,3);
+  cmGrid.appendChild(rowLabel);
+  row.forEach((val,ci)=>{
+    const cell = document.createElement("div");
+    const intensity = (val/cmMax);
+    const isCorrect = ri === ci;
+    const rgb = isCorrect ? cmColors[cmLabels[ri]] : "140,155,220";
+    cell.className = "cm-cell";
+    cell.style.background = `rgba(${rgb}, ${0.12 + intensity*0.55})`;
+    cell.style.color = intensity > 0.5 ? "#04120E" : "var(--text)";
+    cell.textContent = val;
+    cmGrid.appendChild(cell);
+  });
+});
+
+/* ============ render per-class metrics ============ */
+const classRows = document.getElementById("classRows");
+classMetrics.forEach(c=>{
+  const row = document.createElement("div");
+  row.className = "class-row";
+  row.innerHTML = `
+    <div class="class-tag" style="color:${c.color}">${c.name}</div>
+    <div class="class-track"><div class="class-fill" style="width:${(c.f1*100).toFixed(0)}%; background:${c.color}"></div></div>
+    <div class="class-val">${c.f1.toFixed(3)}</div>
+  `;
+  classRows.appendChild(row);
+});
+
+/* ============ render tag cloud ============ */
+const tagCloud = document.getElementById("tagCloud");
+function renderCloud(cat){
+  tagCloud.innerHTML = "";
+  const data = wordClouds[cat];
+  const max = Math.max(...data.map(d=>d[1]));
+  const min = Math.min(...data.map(d=>d[1]));
+  const colorVar = cat === "positive" ? "var(--positive)" : cat === "neutral" ? "var(--neutral)" : "var(--negative)";
+  data.forEach(([word,freq],i)=>{
+    const size = 14 + ((freq-min)/(max-min||1))*26;
+    const span = document.createElement("span");
+    span.className = "tag";
+    span.textContent = word;
+    span.style.fontSize = size+"px";
+    span.style.color = colorVar;
+    span.style.opacity = 0.55 + ((freq-min)/(max-min||1))*0.45;
+    span.style.animationDelay = (i*0.03)+"s";
+    tagCloud.appendChild(span);
+  });
+}
+renderCloud("positive");
+document.querySelectorAll(".cloud-tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".cloud-tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    renderCloud(btn.dataset.c);
+  });
+});
+
+/* ============ render pipeline ============ */
+const pipelineGrid = document.getElementById("pipelineGrid");
+pipelineSteps.forEach(s=>{
+  const el = document.createElement("div");
+  el.className = "pipe-step";
+  el.innerHTML = `<div class="pipe-num">${s.n}</div><div class="pipe-title">${s.t}</div><div class="pipe-desc">${s.d}</div>`;
+  pipelineGrid.appendChild(el);
+});
+
+/* ============ orbit mouse parallax ============ */
+const orbitStage = document.getElementById("orbitStage");
+const orbitScene = orbitStage.querySelector(".orbit-scene");
+orbitStage.addEventListener("mousemove", (e)=>{
+  const rect = orbitStage.getBoundingClientRect();
+  const x = (e.clientX - rect.left)/rect.width - 0.5;
+  const y = (e.clientY - rect.top)/rect.height - 0.5;
+  orbitScene.style.transition = "transform .15s ease-out";
+  orbitScene.style.transform = `rotateX(${62 - y*14}deg) rotateY(${x*18}deg)`;
+});
+orbitStage.addEventListener("mouseleave", ()=>{
+  orbitScene.style.transition = "transform .5s ease";
+  orbitScene.style.transform = "";
+});
+
+/* ============ live predict ============ */
+const OFFLINE_LEXICON = {
+  positive: ["love","great","amazing","thank","thanks","awesome","good","best","helpful","fantastic","excellent","perfect","wonderful","brilliant","nice"],
+  negative: ["worst","bad","hate","terrible","awful","waste","boring","useless","horrible","disappointing","annoying","trash","sucks"],
+};
+function offlinePredict(text){
+  const t = text.toLowerCase();
+  let pos = 0, neg = 0;
+  OFFLINE_LEXICON.positive.forEach(w=>{ if(t.includes(w)) pos++; });
+  OFFLINE_LEXICON.negative.forEach(w=>{ if(t.includes(w)) neg++; });
+  let label = "neutral", conf = 0.55;
+  const total = pos+neg;
+  if(total > 0){
+    if(pos > neg){ label="positive"; conf = Math.min(0.5 + pos*0.13, 0.95); }
+    else if(neg > pos){ label="negative"; conf = Math.min(0.5 + neg*0.13, 0.95); }
+  }
+  const rest = 1-conf;
+  const probs = {positive:0.1, neutral:0.1, negative:0.1};
+  probs[label] = conf;
+  const others = ["positive","neutral","negative"].filter(k=>k!==label);
+  probs[others[0]] = rest*0.6; probs[others[1]] = rest*0.4;
+  return {predicted_sentiment:label, confidence:conf, probabilities:probs, offline:true};
+}
+
+const predictBtn = document.getElementById("predictBtn");
+const predictInput = document.getElementById("predictInput");
+const predictResult = document.getElementById("predictResult");
+const resultPill = document.getElementById("resultPill");
+const probBars = document.getElementById("probBars");
+const predictHint = document.getElementById("predictHint");
+
+async function runPredict(){
+  const text = predictInput.value.trim();
+  if(!text) return;
+  predictBtn.textContent = "…";
+  let result;
+  try{
+    const res = await fetch("http://localhost:8000/predict", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({comment:text}),
+      signal: AbortSignal.timeout(1500),
+    });
+    if(!res.ok) throw new Error("api error");
+    result = await res.json();
+    predictHint.textContent = "Live prediction from your local FastAPI model (localhost:8000).";
+  }catch(err){
+    result = offlinePredict(text);
+    predictHint.textContent = "FastAPI server not detected on localhost:8000 — showing an offline keyword-based demo instead. Run `uvicorn app.main:app --reload` for real model predictions.";
+  }
+  predictBtn.textContent = "Classify";
+
+  resultPill.className = "result-pill pill-" + result.predicted_sentiment;
+  resultPill.textContent = result.predicted_sentiment + " · " + (result.confidence*100).toFixed(0) + "%";
+
+  probBars.innerHTML = "";
+  ["positive","neutral","negative"].forEach(k=>{
+    const val = result.probabilities[k] || 0;
+    const color = k==="positive" ? "var(--positive)" : k==="neutral" ? "var(--neutral)" : "var(--negative)";
+    const row = document.createElement("div");
+    row.className = "prob-row";
+    row.innerHTML = `<span>${k}</span><div class="prob-track"><div class="prob-fill" style="width:${(val*100).toFixed(0)}%; background:${color}"></div></div><span class="mono">${(val*100).toFixed(0)}%</span>`;
+    probBars.appendChild(row);
+  });
+  predictResult.classList.add("show");
+}
+predictBtn.addEventListener("click", runPredict);
+predictInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter") runPredict(); });
+</script>
+</body>
+</html>

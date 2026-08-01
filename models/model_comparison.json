@@ -1,0 +1,119 @@
+[
+  {
+    "model_name": "Logistic Regression",
+    "accuracy": 0.726628895184136,
+    "macro_precision": 0.638686292587776,
+    "macro_recall": 0.6796009279921877,
+    "macro_f1": 0.6527447785901602,
+    "weighted_f1": 0.7387552540477252,
+    "train_time_seconds": 0.48
+  },
+  {
+    "model_name": "Multinomial Naive Bayes",
+    "accuracy": 0.6753541076487252,
+    "macro_precision": 0.7587271108342307,
+    "macro_recall": 0.43344710275887594,
+    "macro_f1": 0.43849425206609816,
+    "weighted_f1": 0.6045517399544683,
+    "train_time_seconds": 0.0
+  },
+  {
+    "model_name": "Decision Tree",
+    "accuracy": 0.615014164305949,
+    "macro_precision": 0.5543005951493175,
+    "macro_recall": 0.5746301277973821,
+    "macro_f1": 0.5406184522064194,
+    "weighted_f1": 0.6324264405536394,
+    "train_time_seconds": 1.35
+  },
+  {
+    "model_name": "Random Forest",
+    "accuracy": 0.7019830028328612,
+    "macro_precision": 0.6187407219596751,
+    "macro_recall": 0.6385844358634385,
+    "macro_f1": 0.6251466896092038,
+    "weighted_f1": 0.7102873013545357,
+    "train_time_seconds": 2.17
+  },
+  {
+    "model_name": "Extra Trees",
+    "accuracy": 0.7118980169971671,
+    "macro_precision": 0.6238254093891292,
+    "macro_recall": 0.6607752712540291,
+    "macro_f1": 0.6372384562648316,
+    "weighted_f1": 0.7209100262663408,
+    "train_time_seconds": 2.9
+  },
+  {
+    "model_name": "Gradient Boosting",
+    "accuracy": 0.6861189801699716,
+    "macro_precision": 0.6693674332195011,
+    "macro_recall": 0.4755907260530505,
+    "macro_f1": 0.49925895024071715,
+    "weighted_f1": 0.6343189911807281,
+    "train_time_seconds": 63.45
+  },
+  {
+    "model_name": "AdaBoost",
+    "accuracy": 0.6362606232294618,
+    "macro_precision": 0.44415121659224743,
+    "macro_recall": 0.35507335714762406,
+    "macro_f1": 0.304241807032938,
+    "weighted_f1": 0.5171613498681413,
+    "train_time_seconds": 9.67
+  },
+  {
+    "model_name": "Linear SVM",
+    "accuracy": 0.746742209631728,
+    "macro_precision": 0.6735890714297593,
+    "macro_recall": 0.6084653626651924,
+    "macro_f1": 0.6317105825809144,
+    "weighted_f1": 0.732462197303885,
+    "train_time_seconds": 0.39
+  },
+  {
+    "model_name": "KNN",
+    "accuracy": 0.30056657223796035,
+    "macro_precision": 0.32532216734564806,
+    "macro_recall": 0.34926098425376617,
+    "macro_f1": 0.20023111864283605,
+    "weighted_f1": 0.22417689437111807,
+    "train_time_seconds": 0.0
+  },
+  {
+    "model_name": "Passive Aggressive",
+    "accuracy": 0.7305949008498583,
+    "macro_precision": 0.6666025333717133,
+    "macro_recall": 0.5782668508425312,
+    "macro_f1": 0.6058467397392453,
+    "weighted_f1": 0.7094608971379179,
+    "train_time_seconds": 0.27
+  },
+  {
+    "model_name": "SGD Classifier",
+    "accuracy": 0.7507082152974505,
+    "macro_precision": 0.6636282865057425,
+    "macro_recall": 0.6542494262654328,
+    "macro_f1": 0.6585993152618566,
+    "weighted_f1": 0.7492316534756863,
+    "train_time_seconds": 0.15
+  },
+  {
+    "model_name": "XGBoost",
+    "accuracy": 0.7328611898016997,
+    "macro_precision": 0.66386761138366,
+    "macro_recall": 0.5848073600461317,
+    "macro_f1": 0.602012658382962,
+    "weighted_f1": 0.7172696566324797,
+    "train_time_seconds": 69.84
+  },
+  {
+    "model_name": "LightGBM",
+    "accuracy": 0.7342776203966006,
+    "macro_precision": 0.637231401483079,
+    "macro_recall": 0.6072883959274934,
+    "macro_f1": 0.618739447784706,
+    "weighted_f1": 0.7270353094908983,
+    "train_time_seconds": 18.26
+  }
+]

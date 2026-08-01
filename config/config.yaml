@@ -1,0 +1,29 @@
+# config.yaml
+# Centralized configuration so paths/hyperparameters aren't hardcoded across
+# modules. Loaded by src/config.py.
+
+data:
+  raw_path: "data/raw/youtube_comments.csv"
+  processed_path: "data/processed/cleaned_comments.csv"
+
+features:
+  tfidf_max_features: 15000
+  tfidf_ngram_range: [1, 2]
+  tfidf_min_df: 2
+
+training:
+  test_size: 0.2
+  random_state: 42
+  target_metric: "macro_f1"   # model selection criterion given class imbalance
+
+models_dir: "models"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  title: "YouTube Comment Sentiment Analysis API"
+  version: "1.0.0"
+
+logging:
+  level: "INFO"
+  log_file: "logs/app.log"
