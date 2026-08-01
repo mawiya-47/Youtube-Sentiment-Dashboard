@@ -1,265 +1,246 @@
-# YouTube Comment Sentiment Analysis
+<div align="center">
 
-A production-oriented NLP system that classifies YouTube comments as
-**Positive**, **Negative**, or **Neutral**, built on the Kaggle
-"YouTube Comments Dataset."
+<img src="dashboard/logo.png" width="120" alt="Sentiment Orbit logo">
 
-> **Scope note:** This is Stage 1 of the project — a complete, real,
-> working classical-ML pipeline (data → EDA → preprocessing → features →
-> 13 models trained & compared → best model saved → prediction API →
-> tests → Docker). Deep learning models (LSTM/BiLSTM/CNN/DistilBERT/RoBERTa),
-> a React dashboard, Optuna/SHAP/LIME, and multi-cloud deployment are
-> deliberately **not** included in this pass — they're real, substantial
-> pieces of work in their own right and are listed under "Future Scope"
-> below rather than stubbed out with placeholder code.
+# 🛰️ Sentiment Orbit
+### YouTube Comment Sentiment Analysis — End-to-End ML System
 
----
+*17,647 real YouTube comments → cleaned → vectorized → classified into Positive / Neutral / Negative*
 
-## 1. Dataset
+<br>
 
-| | |
-|---|---|
-| Source | Kaggle "YouTube Comments Dataset" |
-| Raw rows | 18,409 |
-| Columns | `Comment` (text), `Sentiment` (positive / negative / neutral) |
-| Missing values found | 44 (dropped) |
-| Duplicate rows found | 531 (dropped) |
-| **Final clean dataset** | **17,647 rows** |
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML_Pipeline-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-16%2F16_Passing-2DE1C2?style=for-the-badge&logo=pytest&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-FFC857?style=for-the-badge)
 
-Note: the dataset was *not* fully pre-cleaned as originally described — real
-data always deserves a direct check rather than trusting a description, so
-missing values and duplicates were found and handled explicitly in
-`notebooks/01_data_understanding_eda.py`.
+<br>
 
-**Class distribution** (imbalanced, as is typical for organic comment data):
+**[🌐 Live 3D Dashboard](dashboard/sentiment_orbit_dashboard.html) · [📊 Model Results](#-model-leaderboard) · [🚀 Quick Start](#-quick-start) · [📡 API Docs](#-rest-api)**
 
-| Class | Count | % |
-|---|---|---|
-| Positive | 11,432 | 64.6% |
-| Neutral | 4,638 | 26.2% |
-| Negative | 2,338 | 13.2% |
+</div>
 
-**Business understanding:** the goal is to let a content team or platform
-monitor audience sentiment at scale — flagging negative sentiment spikes and
-quantifying reception — without manually reading thousands of comments. The
-imbalance is a real prior (people comment more when praising content), which
-is why model selection uses **macro F1**, not raw accuracy.
+<br>
 
 ---
 
-## 2. Project Structure
+## 🎯 What is this?
+
+A production-style NLP system that reads a raw YouTube comment and predicts whether it's
+**positive**, **negative**, or **neutral** — trained and benchmarked across **13 classical ML
+models**, served through a **FastAPI** backend, and visualized in a custom **3D interactive
+dashboard**.
+
+Every number in this README came from actually running the pipeline on the real dataset —
+not simulated, not cherry-picked.
+
+<br>
+
+## 🪐 The 3D Dashboard
+
+<div align="center">
+<img src="notebooks/figures/09_confusion_matrix_best_model.png" width="46%" alt="Confusion matrix">
+&nbsp;
+<img src="notebooks/figures/02_class_distribution_pie.png" width="46%" alt="Class distribution">
+</div>
+
+<br>
+
+Open `dashboard/sentiment_orbit_dashboard.html` in a browser for the full experience — a rotating 3D orbit of
+sentiment classes, a live prediction box that talks to the FastAPI backend, an animated
+model leaderboard, and interactive word clouds.
+
+```bash
+uvicorn app.main:app --reload      # start the backend
+# then open dashboard/sentiment_orbit_dashboard.html in your browser
+```
+
+<br>
+
+## 🧬 Pipeline Architecture
+
+```mermaid
+flowchart LR
+    A[📄 Raw Comments<br/>18,409 rows] -->|drop nulls + dupes| B[🧹 Cleaned Data<br/>17,647 rows]
+    B --> C[🔤 NLP Preprocessing<br/>lowercase · lemmatize · stopwords]
+    C --> D[🧮 TF-IDF Vectorizer<br/>15,000 features · bigrams]
+    D --> E[✂️ Stratified Split<br/>80% train / 20% test]
+    E --> F[🤖 13 Models Trained]
+    F --> G{Best by<br/>Macro F1}
+    G --> H[🏆 SGD Classifier<br/>75.1% accuracy]
+    H --> I[💾 Saved Pipeline<br/>joblib artifacts]
+    I --> J[⚡ FastAPI /predict]
+    J --> K[🛰️ 3D Dashboard]
+
+    style A fill:#12172C,stroke:#8B93B5,color:#EAF0FF
+    style H fill:#0c8f79,stroke:#2DE1C2,color:#fff
+    style J fill:#12172C,stroke:#FFC857,color:#EAF0FF
+    style K fill:#12172C,stroke:#FF5C7A,color:#EAF0FF
+```
+
+<br>
+
+## 🏆 Model Leaderboard
+
+13 classical ML algorithms trained on identical TF-IDF features, ranked by **macro F1**
+(the fair metric given the 65% / 26% / 13% class imbalance):
+
+| Rank | Model | Accuracy | Macro F1 | Train Time |
+|:---:|---|:---:|:---:|:---:|
+| 🥇 | **SGD Classifier** | **75.1%** | **0.659** | 0.10s |
+| 🥈 | Logistic Regression | 72.8% | 0.654 | 0.37s |
+| 🥉 | Extra Trees | 71.4% | 0.637 | 11.64s |
+| 4 | Linear SVM | 74.6% | 0.630 | 0.41s |
+| 5 | LightGBM | 73.6% | 0.620 | 18.91s |
+| 6 | Random Forest | 69.8% | 0.614 | 11.73s |
+| 7 | Passive Aggressive | 73.0% | 0.609 | 0.23s |
+| 8 | XGBoost | 73.3% | 0.603 | 68.20s |
+| 9 | Decision Tree | 61.2% | 0.537 | 1.58s |
+| 10 | Gradient Boosting | 68.6% | 0.499 | 38.88s |
+| 11 | Multinomial Naive Bayes | 67.5% | 0.438 | 0.00s |
+| 12 | AdaBoost | 63.6% | 0.304 | 5.54s |
+| 13 | KNN | 29.1% | 0.189 | 0.00s |
+
+<details>
+<summary><b>📊 Per-class performance of the winning model</b></summary>
+<br>
+
+| Class | Precision | Recall | F1 | Support |
+|---|:---:|:---:|:---:|:---:|
+| 🟢 Positive | 0.85 | 0.86 | **0.86** | 2,207 |
+| 🟡 Neutral | 0.59 | 0.60 | **0.59** | 860 |
+| 🔴 Negative | 0.55 | 0.51 | **0.53** | 463 |
+
+**Honest limitation:** the model is noticeably weaker on Negative and Neutral comments —
+a direct effect of class imbalance (only 13% of the data is Negative). This is the natural
+target for future work (class-weighted loss, oversampling, or contextual embeddings).
+
+</details>
+
+<br>
+
+## 📁 Project Structure
 
 ```
 youtube_sentiment_analysis/
-├── data/
-│   ├── raw/youtube_comments.csv         # original Kaggle file
-│   └── processed/cleaned_comments.csv    # after dedup + cleaning + NLP normalization
-├── notebooks/
-│   ├── 01_data_understanding_eda.py      # Phase 2 & 3
-│   └── figures/                            # 11 saved EDA/eval charts
-├── src/
-│   ├── preprocessing.py                   # Phase 4: NLP cleaning pipeline
-│   ├── feature_engineering.py             # Phase 5: TF-IDF / BoW
-│   ├── train.py                           # Phase 6-9, 12: encode, split, train, evaluate, save
-│   ├── evaluate.py                        # Phase 9: reproducible evaluation
-│   ├── predict.py                         # Phase 13: inference
-│   └── config.py                          # config loader
-├── models/                                 # saved artifacts (joblib + JSON reports)
-├── app/
-│   └── main.py                            # Phase 14: FastAPI backend
-├── tests/
-│   └── test_pipeline.py                   # Phase 18: unit + model + API tests (16 tests, all passing)
-├── config/config.yaml
-├── Dockerfile
-├── requirements.txt
-└── README.md
+├── 📂 data/
+│   ├── raw/                  → original Kaggle dataset
+│   └── processed/            → cleaned + lemmatized comments
+├── 📂 notebooks/
+│   ├── 01_data_understanding_eda.py
+│   └── figures/              → 11 EDA charts & word clouds
+├── 📂 src/
+│   ├── preprocessing.py      → NLP cleaning pipeline
+│   ├── feature_engineering.py→ TF-IDF / BoW
+│   ├── train.py              → trains & compares 13 models
+│   ├── evaluate.py           → reproducible evaluation
+│   └── predict.py            → inference module
+├── 📂 models/                → saved vectorizer, encoder, best model
+├── 📂 app/
+│   └── main.py                → FastAPI backend
+├── 📂 dashboard/
+│   └── sentiment_orbit_dashboard.html → 3D interactive dashboard
+├── 📂 tests/                 → 16 unit + model + API tests
+├── 📂 config/
+├── 🐳 Dockerfile
+└── 📄 requirements.txt
 ```
 
----
+<br>
 
-## 3. Preprocessing Pipeline (Phase 4)
-
-`src/preprocessing.py` applies, in order: lowercasing → Unicode
-normalization → URL/email/HTML/emoji removal → contraction expansion →
-number removal → special-character/punctuation stripping → whitespace
-collapse → tokenization → stopword removal → lemmatization.
-
-Example:
-```
-Input:  "I don't LOVE this!! Check http://example.com 😀 123 times..."
-Output: "love check time"
-```
-
-## 4. Feature Engineering (Phase 5)
-
-TF-IDF (unigrams + bigrams, `max_features=15000`, `min_df=2`,
-`sublinear_tf=True`) is the production feature set. Bag-of-Words is also
-implemented for comparison. Word2Vec/FastText/Sentence-Transformers/BERT
-embeddings are documented (with a pros/cons table) in
-`src/feature_engineering.py` as the natural next iteration — they need
-either a large pretrained download or GPU compute that isn't the right
-first move for a ~17.6k-row dataset.
-
-## 5. Label Encoding (Phase 6)
-
-```
-{'negative': 0, 'neutral': 1, 'positive': 2}
-```
-
-## 6. Train/Test Split (Phase 7)
-
-80% train / 20% test, **stratified** on the target to preserve the
-64/26/13 class ratio in both splits — important given the imbalance.
-
-## 7. Model Comparison (Phase 8 & 9)
-
-13 classical algorithms trained on identical TF-IDF features and evaluated
-on the same held-out 20% test set (3,530 comments):
-
-| Model | Accuracy | Macro F1 | Weighted F1 | Train Time (s) |
-|---|---|---|---|---|
-| **SGD Classifier** ⭐ | **0.751** | **0.659** | **0.750** | 0.10 |
-| Logistic Regression | 0.728 | 0.654 | 0.740 | 0.37 |
-| Extra Trees | 0.714 | 0.637 | 0.723 | 11.64 |
-| Linear SVM | 0.746 | 0.630 | 0.732 | 0.41 |
-| LightGBM | 0.736 | 0.620 | 0.728 | 18.91 |
-| Random Forest | 0.698 | 0.614 | 0.706 | 11.73 |
-| Passive Aggressive | 0.730 | 0.609 | 0.710 | 0.23 |
-| XGBoost | 0.733 | 0.603 | 0.718 | 68.20 |
-| Decision Tree | 0.612 | 0.537 | 0.629 | 1.58 |
-| Gradient Boosting | 0.686 | 0.499 | 0.635 | 38.88 |
-| Multinomial Naive Bayes | 0.675 | 0.438 | 0.604 | 0.00 |
-| AdaBoost | 0.636 | 0.304 | 0.517 | 5.54 |
-| KNN | 0.291 | 0.189 | 0.203 | 0.00 |
-
-**Winner: SGD Classifier (log loss)** — best macro F1 despite being one of
-the fastest models to train. Linear models generally beat trees here, which
-is typical for high-dimensional sparse TF-IDF features (~15,000 dims):
-tree splits struggle to exploit sparse one-hot-like features as well as a
-linear decision boundary does.
-
-**Per-class performance of the winning model** (from `src/evaluate.py`):
-
-| Class | Precision | Recall | F1 | Support |
-|---|---|---|---|---|
-| Negative | 0.55 | 0.51 | 0.53 | 463 |
-| Neutral | 0.59 | 0.60 | 0.59 | 860 |
-| Positive | 0.85 | 0.86 | 0.86 | 2,207 |
-
-**Honest limitation:** the model is noticeably weaker on Negative and
-Neutral than on Positive — a direct consequence of class imbalance (only
-13% of training data is Negative) and semantic overlap between mild
-negativity and neutral text. Confusion matrix: `notebooks/figures/09_confusion_matrix_best_model.png`.
-This is the natural target for future work — e.g. class-weighted loss
-tuning, SMOTE-style oversampling, or a contextual embedding model that
-can better separate "this was okay" (neutral) from "this was bad" (negative).
-
-## 8. Model Interpretability (Phase 11 — partial)
-
-Not yet implemented: SHAP/LIME require additional dependencies and are
-listed under Future Scope. Basic interpretability is available today via
-linear model coefficients (`model.coef_` on the saved SGD/LogReg models
-maps directly to TF-IDF vocabulary terms).
-
-## 9. Saved Artifacts (Phase 12)
-
-All in `models/`:
-- `tfidf_vectorizer.joblib`
-- `label_encoder.joblib`
-- `best_model.joblib` (SGD Classifier)
-- `model_metadata.json`, `model_comparison.json`, `best_model_full_report.json`
-
-## 10. Prediction System (Phase 13)
-
-```python
-from src.predict import predict_sentiment
-predict_sentiment("This tutorial was absolutely fantastic, learned so much!")
-# {'predicted_sentiment': 'positive', 'confidence': 0.8167,
-#  'probabilities': {'negative': 0.0656, 'neutral': 0.1177, 'positive': 0.8167}}
-```
-
-## 11. REST API (Phase 14)
+## 🚀 Quick Start
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | liveness check |
-| `/model-info` | GET | metadata + full model comparison table |
-| `/predict` | POST | `{"comment": "..."}` → sentiment + confidence + probabilities |
-| `/predict-batch` | POST | `{"comments": [...]}`, max 200 |
-| `/retrain` | POST | re-runs `src/train.py` synchronously |
-| `/docs` | GET | Swagger UI (auto-generated) |
-
-Verified working end-to-end (see test run): `/health`, `/predict`, and
-`/model-info` all return correct, non-mocked responses from the real
-trained model.
-
-## 12. Testing (Phase 18)
-
-`tests/test_pipeline.py` — 16 tests, all passing: unit tests for the
-preprocessing pipeline, model tests for the prediction schema/consistency,
-and API tests using FastAPI's `TestClient` (no live server needed).
-
-```bash
-pytest tests/ -v
-```
-
-## 13. Installation
-
-```bash
+# 1. Clone & install
+git clone https://github.com/mawiya-47/Youtube-Sentiment-Dashboard.git
+cd Youtube-Sentiment-Dashboard
 pip install -r requirements.txt
 python -m nltk.downloader stopwords wordnet omw-1.4
 
-# 1. Run data understanding + EDA (produces data/processed/cleaned_comments.csv)
+# 2. (optional) re-run the full pipeline — trained artifacts are already in models/
 python notebooks/01_data_understanding_eda.py
-
-# 2. Train & compare all models, save the best one
 python src/train.py
 
 # 3. Try a prediction from the CLI
 python src/predict.py
 
-# 4. Run tests
+# 4. Run the test suite
 pytest tests/ -v
 
 # 5. Start the API
 uvicorn app.main:app --reload
 ```
 
-Or with Docker:
+**🐳 Or with Docker:**
 ```bash
-docker build -t yt-sentiment .
-docker run -p 8000:8000 yt-sentiment
+docker build -t sentiment-orbit .
+docker run -p 8000:8000 sentiment-orbit
 ```
 
-## 14. MLOps (Phase 16 — implemented subset)
+<br>
 
-- **Logging:** structured logging to `logs/app.log` + stdout (`app/main.py`)
-- **Config:** centralized in `config/config.yaml`, loaded via `src/config.py`
-- **Docker:** `Dockerfile` included, with healthcheck
-- **Retraining:** `/retrain` endpoint re-runs the full pipeline
+## 📡 REST API
 
-Not yet implemented (Future Scope): GitHub Actions CI/CD, MLflow experiment
-tracking, DVC data versioning, drift monitoring.
+| Endpoint | Method | Description |
+|---|:---:|---|
+| `/health` | `GET` | liveness check |
+| `/model-info` | `GET` | model metadata + full comparison table |
+| `/predict` | `POST` | `{"comment": "..."}` → sentiment + confidence |
+| `/predict-batch` | `POST` | `{"comments": [...]}` — up to 200 at once |
+| `/retrain` | `POST` | re-runs the full training pipeline |
+| `/docs` | `GET` | interactive Swagger UI |
 
-## 15. Future Scope
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"comment": "this tutorial was absolutely fantastic!"}'
+```
+```json
+{
+  "predicted_sentiment": "positive",
+  "confidence": 0.8167,
+  "probabilities": { "positive": 0.8167, "neutral": 0.1177, "negative": 0.0656 }
+}
+```
 
-- Deep learning models: LSTM, BiLSTM, GRU, CNN-for-text, DistilBERT, RoBERTa
-- Word2Vec / FastText / Sentence-Transformer embeddings
-- Hyperparameter tuning: GridSearchCV / RandomizedSearchCV / Optuna
-- Model interpretability: SHAP, LIME
-- React glassmorphism dashboard (analytics, live prediction, word clouds)
-- MLflow + DVC for experiment/data versioning
-- GitHub Actions CI/CD, cloud deployment (Render/Railway/AWS/Azure/GCP/HF Spaces)
-- Class-imbalance handling (SMOTE, focal loss) to improve Negative/Neutral recall
+<br>
 
-## 16. License
+## 🧠 Tech Stack
 
-MIT — for educational/portfolio use.
+![scikit-learn](https://img.shields.io/badge/-scikit--learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)
+![XGBoost](https://img.shields.io/badge/-XGBoost-EC0000?style=flat-square)
+![LightGBM](https://img.shields.io/badge/-LightGBM-02569B?style=flat-square)
+![NLTK](https://img.shields.io/badge/-NLTK-154F5B?style=flat-square)
+![Pandas](https://img.shields.io/badge/-Pandas-150458?style=flat-square&logo=pandas&logoColor=white)
+![FastAPI](https://img.shields.io/badge/-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Chart.js](https://img.shields.io/badge/-Chart.js-FF6384?style=flat-square&logo=chart.js&logoColor=white)
 
-## 17. Contributors
+<br>
 
-Built as an end-to-end ML engineering exercise.
+## 🔭 Future Scope
+
+- 🧠 Deep learning: LSTM, BiLSTM, CNN-for-text, DistilBERT, RoBERTa
+- 🧮 Embeddings: Word2Vec, FastText, Sentence-Transformers
+- 🎛️ Hyperparameter tuning: GridSearchCV, Optuna
+- 🔍 Interpretability: SHAP, LIME
+- ☁️ Cloud deployment: Render, Railway, AWS, Azure, GCP, HuggingFace Spaces
+- ⚖️ Class-imbalance handling to boost Negative/Neutral recall
+
+<br>
+
+## 📄 License
+
+MIT — free to use for learning, portfolio, and experimentation.
+
+<br>
+
+<div align="center">
+
+**Built with real data, honest metrics, and no shortcuts.**
+
+⭐ If this helped you, consider starring the repo!
+
+</div>
